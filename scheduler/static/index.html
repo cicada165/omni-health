@@ -1,0 +1,2626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointment Scheduler — AI Voice Receptionist</title>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-light: #e0f2fe;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --success-border: #bbf7d0;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --warning-bg: #fffbeb;
+      --warning-border: #fef3c7;
+      --warning-text: #92400e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 2.2rem;
+      height: 2.2rem;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+    }
+
+    .brand-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .patient-badge {
+      font-size: 0.8rem;
+      background: #f1f5f9;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .patient-badge strong {
+      color: var(--text-main);
+    }
+
+    /* Timing / Latency Banner */
+    .timing-banner {
+      display: none;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .timing-tag {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      padding: 0.12rem 0.45rem;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #334155;
+    }
+
+    /* Call Action Buttons */
+    .btn-header {
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease-in-out;
+      border: 1px solid transparent;
+    }
+
+    .btn-mute {
+      background: #f1f5f9;
+      color: #334155;
+      border-color: var(--border);
+    }
+
+    .btn-mute:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-mute.muted {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+
+    .btn-end-call {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+
+    .btn-end-call:hover {
+      background: #fecaca;
+    }
+
+    .btn-start-call-header {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary-hover);
+    }
+
+    .btn-start-call-header:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto;
+      height: calc(100vh - 65px);
+      padding: 1rem 1.25rem;
+      gap: 0.85rem;
+      position: relative;
+    }
+
+    /* Error Notification Banner */
+    #errorBanner {
+      display: none;
+      background: var(--danger-bg);
+      border: 1px solid #fecaca;
+      color: var(--danger);
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    /* Hero Voice Visualizer (Central Voice Interaction Unit) */
+    .voice-hero {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .orb-stage {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .orb-pulse {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(2, 132, 199, 0.2);
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.1s ease-out;
+    }
+
+    .voice-orb {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 1.85rem;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      z-index: 2;
+      transition: transform 0.1s ease-out, background 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+
+    /* Voice State Variants */
+    .voice-hero.state-listening .orb-pulse {
+      animation: ripple 2s infinite cubic-bezier(0, 0.2, 0.8, 1);
+    }
+    .voice-hero.state-listening .orb-pulse.pulse-2 {
+      animation-delay: 1s;
+    }
+    .voice-hero.state-listening .voice-orb {
+      background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
+      box-shadow: 0 0 22px rgba(2, 132, 199, 0.5);
+    }
+
+    .voice-hero.state-processing .voice-orb {
+      background: radial-gradient(circle at 35% 35%, #fde047, #d97706);
+      box-shadow: 0 0 22px rgba(217, 119, 6, 0.5);
+      animation: spinSlow 3s linear infinite;
+    }
+
+    .voice-hero.state-speaking .voice-orb {
+      background: radial-gradient(circle at 35% 35%, #60a5fa, #2563eb);
+      box-shadow: 0 0 26px rgba(37, 99, 235, 0.6);
+      transform: scale(1.04);
+    }
+    .voice-hero.state-speaking .orb-pulse {
+      background: rgba(37, 99, 235, 0.25);
+      animation: ripple 1.6s infinite ease-out;
+    }
+
+    .voice-hero.state-muted .voice-orb {
+      background: radial-gradient(circle at 35% 35%, #94a3b8, #64748b);
+      box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+      filter: grayscale(0.6);
+    }
+
+    .voice-hero.state-inactive .voice-orb {
+      background: radial-gradient(circle at 35% 35%, #cbd5e1, #94a3b8);
+      box-shadow: 0 2px 6px rgba(148, 163, 184, 0.3);
+    }
+
+    /* Soundwave Equalizer Bars for Assistant Speech */
+    .sound-wave {
+      display: none;
+      align-items: center;
+      gap: 3px;
+      height: 24px;
+    }
+
+    .sound-wave span {
+      width: 4px;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 9999px;
+      animation: soundBar 0.8s ease-in-out infinite alternate;
+    }
+
+    .sound-wave span:nth-child(1) { animation-delay: 0.1s; height: 40%; }
+    .sound-wave span:nth-child(2) { animation-delay: 0.3s; height: 90%; }
+    .sound-wave span:nth-child(3) { animation-delay: 0.15s; height: 60%; }
+    .sound-wave span:nth-child(4) { animation-delay: 0.4s; height: 100%; }
+    .sound-wave span:nth-child(5) { animation-delay: 0.25s; height: 50%; }
+
+    .voice-hero.state-speaking .sound-wave {
+      display: flex;
+    }
+    .voice-hero.state-speaking .orb-icon {
+      display: none;
+    }
+
+    /* Voice State Badge & Live Interim Transcription */
+    .voice-status-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.45rem;
+      width: 100%;
+      text-align: center;
+    }
+
+    .voice-state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+
+    .state-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .voice-state-badge.listening {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .voice-state-badge.listening .state-dot {
+      animation: pulseDot 1.2s infinite;
+    }
+
+    .voice-state-badge.processing {
+      background: #fef9c3;
+      color: #a16207;
+      border: 1px solid #fde047;
+    }
+
+    .voice-state-badge.speaking {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    .voice-state-badge.muted {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+    }
+
+    .voice-state-badge.inactive {
+      background: #f8fafc;
+      color: #94a3b8;
+      border: 1px solid var(--border);
+    }
+
+    .live-interim-text {
+      font-size: 0.98rem;
+      color: #1e293b;
+      font-weight: 500;
+      font-style: italic;
+      min-height: 1.5rem;
+      max-width: 90%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.15s;
+    }
+
+    .live-interim-text.active-speech {
+      color: #0284c7;
+      font-weight: 600;
+    }
+
+    /* Staged Appointment Card */
+    #pendingCard {
+      display: none;
+      background: var(--warning-bg);
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      animation: fadeIn 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.08);
+      flex-shrink: 0;
+    }
+
+    .pending-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.45rem;
+    }
+
+    .pending-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--warning-text);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pending-badge {
+      background: #fef08a;
+      color: #854d0e;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+    }
+
+    .pending-details {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #78350f;
+      margin-bottom: 0.65rem;
+    }
+
+    .pending-guidance {
+      font-size: 0.82rem;
+      color: #92400e;
+      background: #fef3c7;
+      padding: 0.4rem 0.65rem;
+      border-radius: 6px;
+      margin-bottom: 0.65rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pending-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-card {
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.15s;
+    }
+
+    .btn-card-confirm {
+      background: var(--success);
+      color: #ffffff;
+    }
+    .btn-card-confirm:hover { background: #15803d; }
+
+    .btn-card-cancel {
+      background: #ffffff;
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+    }
+    .btn-card-cancel:hover { background: #fef2f2; }
+
+    /* Confirmed Booking Receipt Card */
+    #receiptCard {
+      display: none;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      color: #14532d;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      animation: fadeIn 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(22, 163, 74, 0.08);
+      flex-shrink: 0;
+    }
+
+    #receiptCard h4 {
+      font-size: 1rem;
+      color: #166534;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Scrollable Conversation Transcript */
+    #transcript {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 0.7rem 0.95rem;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      animation: fadeIn 0.15s ease-in-out;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: #f1f5f9;
+      color: var(--text-main);
+      border-bottom-left-radius: 2px;
+    }
+
+    .message.system {
+      align-self: center;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      padding: 0.2rem;
+    }
+
+    /* Fullscreen Initial Start Call Overlay */
+    .start-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(248, 250, 252, 0.94);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      border-radius: 12px;
+    }
+
+    .start-modal {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.25rem 2rem;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      animation: modalPop 0.25s ease-out;
+    }
+
+    .start-orb-icon {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      font-size: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      box-shadow: 0 8px 16px rgba(2, 132, 199, 0.35);
+      animation: pulseDot 2s infinite;
+    }
+
+    .start-modal h2 {
+      font-size: 1.35rem;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+    }
+
+    .start-modal p.start-sub {
+      font-size: 0.9rem;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .start-modal p.start-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-connect {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      border: none;
+      padding: 0.85rem 1.85rem;
+      border-radius: 9999px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-connect:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.45);
+    }
+
+    /* Keyframe Animations */
+    @keyframes ripple {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    @keyframes pulseDot {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes soundBar {
+      0% { height: 25%; }
+      100% { height: 100%; }
+    }
+
+    @keyframes spinSlow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Milestone 6B: Voice Selector & Header Controls */
+    .voice-picker {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .header-select {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.82rem;
+      color: var(--text-main);
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .header-select:focus {
+      border-color: var(--primary);
+    }
+    .btn-audition {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .btn-audition:hover {
+      background: #dbeafe;
+    }
+    .btn-inspector {
+      background: #f8fafc;
+      color: #334155;
+      border: 1px solid var(--border);
+    }
+    .btn-inspector:hover {
+      background: #e2e8f0;
+    }
+    .btn-inspector.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #0284c7;
+    }
+
+    /* Milestone 6B: A/B/C Voice Audition Modal */
+    .audition-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      animation: fadeIn 0.15s ease-out;
+    }
+    .audition-modal {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 640px;
+      width: 92%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      animation: modalPop 0.2s ease-out;
+    }
+    .audition-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.85rem;
+    }
+    .audition-title-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .audition-icon {
+      font-size: 1.8rem;
+    }
+    .audition-title-group h3 {
+      font-size: 1.15rem;
+      color: var(--text-main);
+      margin-bottom: 0.15rem;
+    }
+    .audition-title-group p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+    }
+    .btn-close-modal:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+    .audition-sentence-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .audition-sentence-selector label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .sample-pills {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .sample-pill {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sample-pill.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #0284c7;
+    }
+    .sample-preview-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 0.95rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: #334155;
+      font-style: italic;
+    }
+    .voice-cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .voice-audition-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.15s;
+    }
+    .voice-audition-card.active-selected {
+      border-color: #0284c7;
+      background: #f0f9ff;
+    }
+    .voice-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .voice-letter {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .voice-meta h4 {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .tag-default {
+      font-size: 0.65rem;
+      background: #dcfce7;
+      color: #166534;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .voice-badge {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .voice-desc {
+      font-size: 0.83rem;
+      color: #475569;
+      line-height: 1.4;
+    }
+    .voice-card-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .btn-listen-sample {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s;
+    }
+    .btn-listen-sample:hover { background: #0369a1; }
+    .btn-listen-sample.playing {
+      background: #16a34a;
+    }
+    .btn-select-voice {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-select-voice:hover { background: #f8fafc; }
+
+    /* Milestone 6B: Developer Inspector Collapsible Side Panel */
+    .inspector-panel {
+      position: fixed;
+      top: 64px;
+      right: 0;
+      width: 420px;
+      max-width: 100vw;
+      height: calc(100vh - 64px);
+      background: #ffffff;
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateX(0);
+    }
+    .inspector-panel.collapsed {
+      transform: translateX(100%);
+      pointer-events: none;
+    }
+    .inspector-header {
+      padding: 0.85rem 1.15rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+    }
+    .inspector-title {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .inspector-icon { font-size: 1.3rem; }
+    .inspector-title h3 {
+      font-size: 0.98rem;
+      color: var(--text-main);
+      margin-bottom: 0.1rem;
+    }
+    .inspector-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .inspector-header-actions {
+      display: flex;
+      gap: 0.35rem;
+    }
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .btn-icon:hover { background: #ffffff; color: var(--text-main); }
+    .inspector-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #fafbfc;
+    }
+    .inspector-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+    .card-header-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header-line h4 {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+    }
+    .card-row .label { color: var(--text-muted); }
+    .code-val {
+      font-family: monospace;
+      background: #f1f5f9;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+    .status-pill {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .status-pill.idle { background: #f1f5f9; color: #64748b; }
+    .status-pill.staged { background: #fef3c7; color: #b45309; }
+    .status-pill.committed { background: #dcfce7; color: #15803d; }
+    .status-pill.cancelled { background: #fee2e2; color: #b91c1c; }
+
+    .distinction-banner {
+      border-radius: 6px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+    .distinction-banner.in-memory {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+    .distinction-banner.committed {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+    .state-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      background: #f8fafc;
+      padding: 0.4rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid #f1f5f9;
+    }
+    .dt-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .dt-val {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .source-tag {
+      font-size: 0.68rem;
+      background: #f1f5f9;
+      color: #64748b;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .timeline-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: -0.25rem;
+    }
+    .event-timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+    .event-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+    }
+    .event-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stage-pill {
+      font-size: 0.66rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stage-pill.stt { background: #ede9fe; color: #6d28d9; }
+    .stage-pill.llm { background: #dbeafe; color: #1e40af; }
+    .stage-pill.tool { background: #fef3c7; color: #b45309; }
+    .stage-pill.proposal { background: #fef08a; color: #854d0e; }
+    .stage-pill.sqlite_commit { background: #dcfce7; color: #166534; font-weight: 800; }
+    .stage-pill.tts { background: #cffafe; color: #0e7490; }
+    .stage-pill.cancel { background: #fee2e2; color: #991b1b; }
+    .stage-pill.interrupt { background: #ffedd5; color: #c2410c; font-weight: 700; }
+    .stage-pill.session_init { background: #f1f5f9; color: #475569; }
+    .stage-pill.voice_change { background: #fce7f3; color: #9d174d; }
+
+    .dur-badge {
+      font-size: 0.72rem;
+      color: #64748b;
+      font-family: monospace;
+    }
+    .event-title {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .event-details-preview {
+      font-size: 0.76rem;
+      color: #475569;
+      background: #ffffff;
+      border: 1px solid #f1f5f9;
+      border-radius: 4px;
+      padding: 0.35rem 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: monospace;
+    }
+    .badge-count {
+      font-size: 0.72rem;
+      background: #f1f5f9;
+      color: #64748b;
+      padding: 0.1rem 0.45rem;
+      border-radius: 9999px;
+    }
+    .empty-state {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 0.75rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Clinic Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">H</div>
+      <div>
+        <div class="brand-title">Appointment Scheduler</div>
+        <div class="brand-subtitle">AI Voice Medical Receptionist</div>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div id="timingBanner" class="timing-banner"></div>
+      
+      <!-- Voice Selector (Milestone 6B) -->
+      <div class="voice-picker">
+        <label for="voiceSelect">Voice:</label>
+        <select id="voiceSelect" class="header-select" title="Active Cartesia Receptionist Voice">
+          <option value="62ae83ad-4f6a-430b-af41-a9bede9286ca">🎙️ Gemma (British Warm)</option>
+          <option value="c46cf1f6-49a1-4d67-9a57-ff859a4046d3">🎙️ Cora (American Articulate)</option>
+          <option value="01eaafa9-308a-4276-a017-6ab0cf061b1f">🎙️ Clara (American Reassuring)</option>
+        </select>
+      </div>
+
+      <!-- Voice Audition Button (Milestone 6B) -->
+      <button type="button" id="btnAudition" class="btn-header btn-audition" title="A/B/C Voice Audition">
+        🎧 Audition
+      </button>
+
+      <!-- Developer Inspector Toggle Button (Milestone 6B) -->
+      <button type="button" id="btnToggleInspector" class="btn-header btn-inspector" title="Toggle Developer Inspector Panel">
+        🛠️ Inspector
+      </button>
+
+      <button type="button" id="btnMuteVoice" class="btn-header btn-mute" style="display: none;" title="Mute Microphone">
+        🎤 Mute
+      </button>
+      <button type="button" id="btnEndCall" class="btn-header btn-end-call" style="display: none;" title="End Voice Call">
+        ⏹ End Call
+      </button>
+      <button type="button" id="btnStartCallHeader" class="btn-header btn-start-call-header" style="display: none;" title="Start Voice Call">
+        🎙️ Start Call
+      </button>
+      <div class="patient-badge">
+        Patient: <strong id="patientLabel">Alex Taylor</strong> (Fictional Demo)
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Voice Interface -->
+  <main>
+    <!-- Start Call Modal (Active by Default to Unlock Audio & Mic) -->
+    <div id="startOverlay" class="start-overlay">
+      <div class="start-modal">
+        <div class="start-orb-icon">🎙️</div>
+        <h2>Appointment Scheduler</h2>
+        <p class="start-sub">Conversational AI Voice Receptionist</p>
+        <p class="start-desc">
+          Speak naturally to search doctors, explore available appointment times, and book visits hands-free with auto-spoken replies.
+        </p>
+        <button type="button" id="btnStartCall" class="btn-connect">
+          <span>Connect to Receptionist</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Error Alert Banner -->
+    <div id="errorBanner"></div>
+
+    <!-- Central Hero Voice Visualizer -->
+    <div class="voice-hero state-inactive" id="voiceHero">
+      <div class="orb-stage">
+        <div class="orb-pulse pulse-1" id="orbPulse1"></div>
+        <div class="orb-pulse pulse-2" id="orbPulse2"></div>
+        <div class="voice-orb" id="voiceOrb" title="Microphone Status">
+          <div class="orb-icon" id="orbIcon">🎙️</div>
+          <div class="sound-wave" id="soundWave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+      <div class="voice-status-bar">
+        <div class="voice-state-badge inactive" id="voiceStateBadge">
+          <span class="state-dot"></span>
+          <span id="voiceStateLabel">Ready to Connect</span>
+        </div>
+        <div class="live-interim-text" id="liveInterimText">Click "Connect to Receptionist" to begin speaking</div>
+      </div>
+    </div>
+
+    <!-- Proposed Appointment Card (Awaiting Verbal Confirmation) -->
+    <div id="pendingCard">
+      <div class="pending-header">
+        <div class="pending-title">
+          <span>📅 Proposed Appointment</span>
+        </div>
+        <span class="pending-badge">Awaiting Confirmation</span>
+      </div>
+      <div class="pending-details" id="pendingDetails">
+        <!-- Rendered safely via textContent -->
+      </div>
+      <div class="pending-guidance">
+        <span>🗣️</span>
+        <span>Say <strong>"Yes, book it"</strong> to confirm, or <strong>"Actually change it"</strong> to switch time.</span>
+      </div>
+      <div class="pending-actions">
+        <button id="btnConfirm" class="btn-card btn-card-confirm">Confirm Appointment</button>
+        <button id="btnCancel" class="btn-card btn-card-cancel">Cancel Selection</button>
+      </div>
+    </div>
+
+    <!-- Confirmed Booking Receipt Card -->
+    <div id="receiptCard">
+      <div class="receipt-header">
+        <h4 id="receiptTitle">✔ Appointment Confirmed!</h4>
+      </div>
+      <div id="receiptDetails"></div>
+    </div>
+
+    <!-- Live Conversation Transcript -->
+    <div id="transcript">
+      <div class="message system">Welcome to Appointment Scheduler. Voice mode is active with auto-play replies.</div>
+    </div>
+  </main>
+
+  <!-- A/B/C Voice Audition Modal (Milestone 6B) -->
+  <div id="auditionModal" class="audition-modal-overlay" style="display: none;">
+    <div class="audition-modal">
+      <div class="audition-header">
+        <div class="audition-title-group">
+          <span class="audition-icon">🎧</span>
+          <div>
+            <h3>Voice Quality & A/B/C Audition</h3>
+            <p>Compare Cartesia medical receptionist voices on standardized appointment sentences.</p>
+          </div>
+        </div>
+        <button type="button" id="btnCloseAudition" class="btn-close-modal" title="Close Audition">✕</button>
+      </div>
+
+      <div class="audition-sentence-selector">
+        <label>Standardized Test Sentence:</label>
+        <div class="sample-pills">
+          <button type="button" class="sample-pill active" data-sample="greeting">1. Clinic Greeting & Times</button>
+          <button type="button" class="sample-pill" data-sample="confirmation">2. Pre-Booking Confirmation</button>
+          <button type="button" class="sample-pill" data-sample="receipt">3. Confirmed Booking Receipt</button>
+        </div>
+        <div class="sample-preview-box" id="auditionSentenceText">
+          "Hello, thank you for calling Appointment Scheduler. I have two openings with Dr. Charles Babbage in Cardiology: Tuesday, November 17 at 9:00 AM, or Wednesday, November 18 at 2:00 PM PST. Which of those times works best for you?"
+        </div>
+      </div>
+
+      <div class="voice-cards-grid">
+        <!-- Voice A: Gemma -->
+        <div class="voice-audition-card" id="cardGemma">
+          <div class="voice-card-header">
+            <span class="voice-letter">A</span>
+            <div class="voice-meta">
+              <h4>Gemma <span class="tag-default">Default</span></h4>
+              <span class="voice-badge">British • Warm • Feminine</span>
+            </div>
+          </div>
+          <p class="voice-desc">Confident, polished, and warm British delivery ideal for professional healthcare assistance.</p>
+          <div class="voice-card-actions">
+            <button type="button" class="btn-listen-sample" data-voice="62ae83ad-4f6a-430b-af41-a9bede9286ca">
+              ▶ Listen Sample
+            </button>
+            <button type="button" class="btn-select-voice" data-voice="62ae83ad-4f6a-430b-af41-a9bede9286ca">
+              Set Active
+            </button>
+          </div>
+        </div>
+
+        <!-- Voice B: Cora -->
+        <div class="voice-audition-card" id="cardCora">
+          <div class="voice-card-header">
+            <span class="voice-letter">B</span>
+            <div class="voice-meta">
+              <h4>Cora</h4>
+              <span class="voice-badge">American • Articulate • Feminine</span>
+            </div>
+          </div>
+          <p class="voice-desc">Helpful, articulate, and patient American tone well-suited for patient navigation.</p>
+          <div class="voice-card-actions">
+            <button type="button" class="btn-listen-sample" data-voice="c46cf1f6-49a1-4d67-9a57-ff859a4046d3">
+              ▶ Listen Sample
+            </button>
+            <button type="button" class="btn-select-voice" data-voice="c46cf1f6-49a1-4d67-9a57-ff859a4046d3">
+              Set Active
+            </button>
+          </div>
+        </div>
+
+        <!-- Voice C: Clara -->
+        <div class="voice-audition-card" id="cardClara">
+          <div class="voice-card-header">
+            <span class="voice-letter">C</span>
+            <div class="voice-meta">
+              <h4>Clara</h4>
+              <span class="voice-badge">American • Reassuring • Feminine</span>
+            </div>
+          </div>
+          <p class="voice-desc">Clear enunciation and reassuring, measured pacing providing clinical authority.</p>
+          <div class="voice-card-actions">
+            <button type="button" class="btn-listen-sample" data-voice="01eaafa9-308a-4276-a017-6ab0cf061b1f">
+              ▶ Listen Sample
+            </button>
+            <button type="button" class="btn-select-voice" data-voice="01eaafa9-308a-4276-a017-6ab0cf061b1f">
+              Set Active
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible Developer Inspector Side Panel (Milestone 6B) -->
+  <aside id="inspectorPanel" class="inspector-panel collapsed">
+    <div class="inspector-header">
+      <div class="inspector-title">
+        <span class="inspector-icon">🛠️</span>
+        <div>
+          <h3>Developer Inspector</h3>
+          <span class="inspector-subtitle">Live Session & Database Timeline</span>
+        </div>
+      </div>
+      <div class="inspector-header-actions">
+        <button type="button" id="btnRefreshInspector" class="btn-icon" title="Refresh State">↻</button>
+        <button type="button" id="btnCloseInspector" class="btn-icon" title="Close Panel">✕</button>
+      </div>
+    </div>
+
+    <div class="inspector-body">
+      <!-- Session & Active Voice Banner -->
+      <div class="inspector-card session-summary-card">
+        <div class="card-row">
+          <span class="label">Session ID:</span>
+          <span id="inspSessionId" class="val code-val">—</span>
+        </div>
+        <div class="card-row">
+          <span class="label">Active Voice:</span>
+          <span id="inspActiveVoice" class="val font-semibold">—</span>
+        </div>
+        <div class="card-row">
+          <span class="label">Patient (Demo):</span>
+          <span id="inspPatientName" class="val">Alex Taylor</span>
+        </div>
+      </div>
+
+      <!-- Current Appointment State Card -->
+      <div class="inspector-card appointment-state-card">
+        <div class="card-header-line">
+          <h4>Appointment Lifecycle State</h4>
+          <span id="inspStatusBadge" class="status-pill idle">IDLE</span>
+        </div>
+
+        <div id="inspStagedBanner" class="distinction-banner in-memory" style="display: none;">
+          🟡 <strong>LLM In-Memory Proposal (Uncommitted)</strong>
+          <p>Staged in Python session memory. SQLite has NOT been modified.</p>
+        </div>
+
+        <div id="inspCommitBanner" class="distinction-banner committed" style="display: none;">
+          🟢 <strong>SQLite Atomic Commit (Committed to Disk)</strong>
+          <p>Written to SQLite database table 'bookings' via deterministic transaction.</p>
+        </div>
+
+        <div class="state-details-grid" id="inspStateDetails">
+          <div class="detail-item">
+            <span class="dt-label">Doctor</span>
+            <span class="dt-val" id="inspDoctor">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="dt-label">Specialty</span>
+            <span class="dt-val" id="inspSpecialty">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="dt-label">Time</span>
+            <span class="dt-val" id="inspTime">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="dt-label">Slot ID</span>
+            <span class="dt-val" id="inspSlotId">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real SQLite Database Booking Row (Queried directly from SQLite) -->
+      <div class="inspector-card sqlite-row-card" id="inspSqliteCard">
+        <div class="card-header-line">
+          <h4>Real SQLite Database Record</h4>
+          <span class="source-tag">Table: bookings</span>
+        </div>
+        <div id="inspSqliteContent">
+          <div class="empty-state">No appointment confirmed in SQLite yet.</div>
+        </div>
+      </div>
+
+      <!-- Live Event Timeline (STT -> Gemini -> Tool calls -> SQLite -> TTS) -->
+      <div class="inspector-card timeline-card">
+        <div class="card-header-line">
+          <h4>Live Event Timeline</h4>
+          <span id="inspEventCount" class="badge-count">0 events</span>
+        </div>
+        <p class="timeline-sub">Live pipeline flow: STT ➔ LLM ➔ Tool ➔ SQLite ➔ TTS</p>
+        <div id="inspEventList" class="event-timeline-list">
+          <div class="empty-state">Waiting for voice or message activity...</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    (function() {
+      let sessionId = null;
+      let isBusy = false;
+
+      // Web Audio API context & priming for guaranteed zero-block autoplay
+      let audioCtx = null;
+      let currentAudioSource = null;
+      let currentAudioElement = null;
+      let currentSpeakAbortController = null;
+      let playbackStartTime = null;
+      let micAnalyser = null;
+      let animFrameId = null;
+
+      // Echo prevention & barge-in debounce constants
+      const ONSET_DEBOUNCE_MS = 150;
+      const BARGE_IN_ENERGY_THRESHOLD = 0.035;
+
+      // Latency instrumentation
+      let lastSttMs = null;
+      let lastLlmMs = null;
+      let lastTtsMs = null;
+
+      // Hands-Free Voice Mode state
+      let isVoiceModeActive = false;
+      let voiceWs = null;
+      let voiceStream = null;
+      let voiceRecorder = null;
+      let voiceState = "inactive"; // "connecting", "listening", "processing", "speaking", "muted", "inactive"
+      let isMuted = false;
+      let accumulatedUtterance = "";
+      let latestInterim = "";
+      let hasSubmittedCurrentUtterance = false;
+      let currentPlaybackResolve = null;
+      let currentTurnId = 0; // Monotonic Turn ID to discard stale/out-of-order responses
+
+      // DOM Elements
+      const transcript = document.getElementById("transcript");
+      const timingBanner = document.getElementById("timingBanner");
+      const errorBanner = document.getElementById("errorBanner");
+      const pendingCard = document.getElementById("pendingCard");
+      const pendingDetails = document.getElementById("pendingDetails");
+      const btnConfirm = document.getElementById("btnConfirm");
+      const btnCancel = document.getElementById("btnCancel");
+      const receiptCard = document.getElementById("receiptCard");
+      const receiptDetails = document.getElementById("receiptDetails");
+      const patientLabel = document.getElementById("patientLabel");
+
+      const startOverlay = document.getElementById("startOverlay");
+      const btnStartCall = document.getElementById("btnStartCall");
+      const btnStartCallHeader = document.getElementById("btnStartCallHeader");
+      const btnEndCall = document.getElementById("btnEndCall");
+      const btnMuteVoice = document.getElementById("btnMuteVoice");
+
+      const voiceHero = document.getElementById("voiceHero");
+      const voiceOrb = document.getElementById("voiceOrb");
+      const orbPulse1 = document.getElementById("orbPulse1");
+      const orbIcon = document.getElementById("orbIcon");
+      const soundWave = document.getElementById("soundWave");
+      const voiceStateBadge = document.getElementById("voiceStateBadge");
+      const voiceStateLabel = document.getElementById("voiceStateLabel");
+      const liveInterimText = document.getElementById("liveInterimText");
+
+      // Latency chip display
+      function updateLatencyDisplay() {
+        if (!timingBanner) return;
+        const chips = [];
+        if (lastSttMs != null) chips.push(`<span class="timing-tag">STT: ${Math.round(lastSttMs)}ms</span>`);
+        if (lastLlmMs != null) chips.push(`<span class="timing-tag">LLM: ${Math.round(lastLlmMs)}ms</span>`);
+        if (lastTtsMs != null) chips.push(`<span class="timing-tag">TTS: ${Math.round(lastTtsMs)}ms</span>`);
+
+        if (chips.length > 0) {
+          const total = (lastSttMs || 0) + (lastLlmMs || 0) + (lastTtsMs || 0);
+          timingBanner.style.display = "flex";
+          timingBanner.innerHTML = "⚡ " + chips.join(" ") +
+            (chips.length > 1 ? ` <span class="timing-tag"><strong>Total: ${Math.round(total)}ms</strong></span>` : "");
+        }
+      }
+
+      // Safe message rendering
+      function appendMessage(role, text) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "message " + role;
+        msgDiv.textContent = text;
+        transcript.appendChild(msgDiv);
+        transcript.scrollTop = transcript.scrollHeight;
+      }
+
+      function showError(msg) {
+        if (!msg) {
+          errorBanner.style.display = "none";
+          errorBanner.textContent = "";
+        } else {
+          errorBanner.style.display = "block";
+          errorBanner.textContent = msg;
+        }
+      }
+
+      function updatePendingCard(pending) {
+        if (!pending || pending.status !== "awaiting_confirmation") {
+          pendingCard.style.display = "none";
+          pendingDetails.textContent = "";
+          return;
+        }
+
+        pendingCard.style.display = "block";
+        pendingDetails.textContent = "";
+
+        const line1 = document.createElement("div");
+        line1.textContent = "Doctor: " + pending.doctor_name + " (" + pending.specialty + ")";
+
+        const line2 = document.createElement("div");
+        line2.textContent = "Time: " + pending.local_time_str;
+
+        const line3 = document.createElement("div");
+        line3.textContent = "Patient: " + pending.patient_name;
+
+        pendingDetails.appendChild(line1);
+        pendingDetails.appendChild(line2);
+        pendingDetails.appendChild(line3);
+      }
+
+      function showReceipt(bookingId, message) {
+        receiptCard.style.display = "block";
+        receiptDetails.textContent = message;
+      }
+
+      // Voice State Machine UI updater
+      function setVoiceState(state, customLabel = null) {
+        voiceState = state;
+        voiceHero.className = "voice-hero state-" + state;
+        voiceStateBadge.className = "voice-state-badge " + state;
+
+        let label = customLabel;
+        if (!label) {
+          if (state === "connecting") label = "Connecting...";
+          else if (state === "listening") label = "Listening";
+          else if (state === "processing") label = "Thinking...";
+          else if (state === "speaking") label = "Receptionist Speaking";
+          else if (state === "muted") label = "Microphone Muted";
+          else if (state === "inactive") label = "Call Ended";
+          else label = state;
+        }
+        voiceStateLabel.textContent = label;
+
+        if (state === "listening") {
+          orbIcon.textContent = "🎙️";
+          soundWave.style.display = "none";
+          orbIcon.style.display = "block";
+          liveInterimText.classList.remove("active-speech");
+        } else if (state === "processing") {
+          orbIcon.textContent = "⏳";
+          soundWave.style.display = "none";
+          orbIcon.style.display = "block";
+        } else if (state === "speaking") {
+          orbIcon.style.display = "none";
+          soundWave.style.display = "flex";
+        } else if (state === "muted") {
+          orbIcon.textContent = "🔇";
+          soundWave.style.display = "none";
+          orbIcon.style.display = "block";
+        } else {
+          orbIcon.textContent = "📞";
+          soundWave.style.display = "none";
+          orbIcon.style.display = "block";
+        }
+      }
+
+      function resetUtteranceState() {
+        accumulatedUtterance = "";
+        latestInterim = "";
+        hasSubmittedCurrentUtterance = false;
+      }
+
+      function getSupportedMimeType() {
+        const candidates = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/ogg;codecs=opus",
+          "audio/ogg",
+          "audio/wav"
+        ];
+        if (!window.MediaRecorder) return "";
+        for (const mime of candidates) {
+          if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mime)) {
+            return mime;
+          }
+        }
+        return "";
+      }
+
+      // Unlock Web Audio API during user interaction
+      function initAudioContext() {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        }
+        if (audioCtx && audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      }
+
+      // Live Audio Metering (Pulsates the orb with the user's voice)
+      function setupAudioMeter(stream) {
+        if (!audioCtx) return;
+        try {
+          const source = audioCtx.createMediaStreamSource(stream);
+          micAnalyser = audioCtx.createAnalyser();
+          micAnalyser.fftSize = 64;
+          source.connect(micAnalyser);
+
+          const bufferLength = micAnalyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+
+          function renderMeter() {
+            if (isVoiceModeActive && voiceState === "listening" && !isMuted) {
+              micAnalyser.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+              }
+              const avg = sum / bufferLength;
+              const scale = 1 + Math.min(avg / 128, 0.4);
+              if (voiceOrb) {
+                voiceOrb.style.transform = `scale(${scale})`;
+              }
+            } else if (voiceState !== "speaking" && voiceOrb) {
+              voiceOrb.style.transform = "scale(1)";
+            }
+            animFrameId = requestAnimationFrame(renderMeter);
+          }
+          renderMeter();
+        } catch (e) {
+          console.warn("Audio meter setup skipped:", e);
+        }
+      }
+
+      // Normalized Microphone RMS / Energy for echo-safe barge-in detection
+      function getMicEnergy() {
+        if (!micAnalyser) return 0.5;
+        const bufferLength = micAnalyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        micAnalyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        return (sum / bufferLength) / 255;
+      }
+
+      // Stop audio playback
+      function stopCurrentPlayback() {
+        if (currentSpeakAbortController) {
+          try { currentSpeakAbortController.abort(); } catch (_) {}
+          currentSpeakAbortController = null;
+        }
+        if (currentAudioSource) {
+          try {
+            currentAudioSource.stop();
+          } catch (_) {}
+          currentAudioSource = null;
+        }
+        if (currentAudioElement) {
+          try {
+            currentAudioElement.pause();
+            currentAudioElement.currentTime = 0;
+          } catch (_) {}
+          currentAudioElement = null;
+        }
+        playbackStartTime = null;
+      }
+
+      // Play audio bytes with zero-delay Web Audio API
+      async function playAudioBytes(arrayBuffer) {
+        stopCurrentPlayback();
+        initAudioContext();
+
+        if (!audioCtx) return;
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+
+        playbackStartTime = performance.now();
+
+        try {
+          // Native decode of Cartesia WAV audio (PCM 16-bit 44.1kHz)
+          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+          return new Promise((resolve) => {
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioCtx.destination);
+            currentAudioSource = source;
+
+            source.onended = function() {
+              if (currentAudioSource === source) {
+                currentAudioSource = null;
+              }
+              playbackStartTime = null;
+              resolve();
+            };
+            source.start(0);
+          });
+        } catch (err) {
+          console.warn("AudioContext decode failed, fallback to Audio element:", err);
+          const blob = new Blob([arrayBuffer], { type: "audio/wav" });
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          currentAudioElement = audio;
+          return new Promise((resolve) => {
+            audio.onended = () => {
+              URL.revokeObjectURL(url);
+              if (currentAudioElement === audio) currentAudioElement = null;
+              playbackStartTime = null;
+              resolve();
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(url);
+              if (currentAudioElement === audio) currentAudioElement = null;
+              playbackStartTime = null;
+              resolve();
+            };
+            audio.play().catch(() => {
+              URL.revokeObjectURL(url);
+              if (currentAudioElement === audio) currentAudioElement = null;
+              playbackStartTime = null;
+              resolve();
+            });
+          });
+        }
+      }
+
+      // Initialize session on page load
+      async function initSession() {
+        showError(null);
+        try {
+          const res = await fetch("/api/sessions", { method: "POST" });
+          if (!res.ok) throw new Error("Could not initialize session.");
+          const data = await res.json();
+          sessionId = data.session_id;
+          patientLabel.textContent = data.patient_name || "Alex Taylor";
+          return sessionId;
+        } catch (err) {
+          showError("Failed to initialize scheduling session: " + err.message);
+          return null;
+        }
+      }
+
+      // Start Hands-Free Voice Mode
+      async function startVoiceMode() {
+        if (isVoiceModeActive) return;
+        initAudioContext();
+        stopCurrentPlayback();
+        showError(null);
+
+        // Ensure session exists
+        if (!sessionId) {
+          const sid = await initSession();
+          if (!sid) return;
+        }
+
+        // Hide start overlay
+        startOverlay.style.display = "none";
+
+        // 1. Acquire microphone with echo cancellation & noise suppression
+        try {
+          voiceStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            }
+          });
+        } catch (err) {
+          showError("Microphone permission was denied. Please allow microphone access in your browser to use voice mode.");
+          startOverlay.style.display = "flex";
+          return;
+        }
+
+        isVoiceModeActive = true;
+        isMuted = false;
+        resetUtteranceState();
+
+        // Update header buttons
+        btnMuteVoice.style.display = "inline-flex";
+        btnMuteVoice.classList.remove("muted");
+        btnMuteVoice.textContent = "🎤 Mute";
+        btnEndCall.style.display = "inline-flex";
+        btnStartCallHeader.style.display = "none";
+
+        setVoiceState("connecting");
+        liveInterimText.textContent = "Connecting to speech recognition...";
+
+        // Set up live audio visualizer
+        setupAudioMeter(voiceStream);
+
+        // 2. Open WebSocket to Deepgram streaming proxy
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/api/sessions/${encodeURIComponent(sessionId)}/ws/transcribe`;
+
+        try {
+          voiceWs = new WebSocket(wsUrl);
+          voiceWs.binaryType = "arraybuffer";
+        } catch (wsErr) {
+          showError("Failed to establish voice streaming connection: " + wsErr.message);
+          endVoiceMode(false);
+          return;
+        }
+
+        voiceWs.onopen = function() {
+          console.log("[Voice] WebSocket connected to proxy.");
+        };
+
+        voiceWs.onmessage = async function(event) {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "ready") {
+              console.log("[Voice] Deepgram streaming proxy is ready.");
+              // Start streaming audio from the very beginning (Chunk 0 contains container header)
+              startVoiceStreaming();
+
+              // Speak receptionist greeting aloud via Cartesia TTS
+              const greetingText = "Hello! I am the receptionist for Appointment Scheduler. How can I assist you with your appointment today?";
+              appendMessage("assistant", greetingText);
+              await speakVoiceResponse(greetingText, ++currentTurnId);
+            } else {
+              handleVoiceWsMessage(data);
+            }
+          } catch (e) {
+            console.error("Error parsing voice WS message:", e);
+          }
+        };
+
+        voiceWs.onerror = function(err) {
+          console.error("Voice WebSocket error:", err);
+          showError("Voice streaming connection error.");
+        };
+
+        voiceWs.onclose = function(e) {
+          console.log("[Voice] WebSocket closed with code:", e.code);
+          if (isVoiceModeActive) {
+            endVoiceMode(false);
+          }
+        };
+      }
+
+      function endVoiceMode(notifyUser = true) {
+        if (!isVoiceModeActive) return;
+        isVoiceModeActive = false;
+        isMuted = false;
+        ++currentTurnId;
+        stopCurrentPlayback();
+
+        if (animFrameId) {
+          cancelAnimationFrame(animFrameId);
+          animFrameId = null;
+        }
+
+        // Stop media stream tracks
+        if (voiceStream) {
+          voiceStream.getTracks().forEach(track => track.stop());
+          voiceStream = null;
+        }
+
+        // Stop recorder
+        if (voiceRecorder && voiceRecorder.state !== "inactive") {
+          try { voiceRecorder.stop(); } catch (_) {}
+          voiceRecorder = null;
+        }
+
+        // Close WebSocket
+        if (voiceWs && (voiceWs.readyState === WebSocket.OPEN || voiceWs.readyState === WebSocket.CONNECTING)) {
+          try {
+            voiceWs.send(JSON.stringify({ type: "close" }));
+            voiceWs.close();
+          } catch (_) {}
+          voiceWs = null;
+        }
+
+        // Update UI
+        btnMuteVoice.style.display = "none";
+        btnEndCall.style.display = "none";
+        btnStartCallHeader.style.display = "inline-flex";
+        setVoiceState("inactive");
+        liveInterimText.textContent = "Call ended. Click 'Start Call' to begin a new session.";
+        resetUtteranceState();
+
+        if (notifyUser) {
+          appendMessage("system", "Voice call ended.");
+        }
+      }
+
+      function toggleMuteVoice() {
+        if (!isVoiceModeActive || !voiceStream) return;
+        isMuted = !isMuted;
+        // Hardware mute via audio tracks sends continuous silence frames to preserve WebM container
+        voiceStream.getAudioTracks().forEach(track => {
+          track.enabled = !isMuted;
+        });
+
+        if (isMuted) {
+          btnMuteVoice.classList.add("muted");
+          btnMuteVoice.textContent = "🔇 Unmute";
+          setVoiceState("muted");
+          liveInterimText.textContent = "Microphone muted";
+        } else {
+          btnMuteVoice.classList.remove("muted");
+          btnMuteVoice.textContent = "🎤 Mute";
+          resetUtteranceState();
+          setVoiceState("listening");
+          liveInterimText.textContent = "Listening... speak naturally";
+        }
+      }
+
+      function startVoiceStreaming() {
+        if (!voiceStream) return;
+        const mimeType = getSupportedMimeType();
+        try {
+          voiceRecorder = mimeType ? new MediaRecorder(voiceStream, { mimeType }) : new MediaRecorder(voiceStream);
+        } catch (_) {
+          voiceRecorder = new MediaRecorder(voiceStream);
+        }
+
+        voiceRecorder.ondataavailable = async function(e) {
+          // CRITICAL: Send EVERY chunk to Deepgram without dropping!
+          // Chunk 0 contains the EBML/WebM container header.
+          if (
+            isVoiceModeActive &&
+            voiceWs &&
+            voiceWs.readyState === WebSocket.OPEN &&
+            e.data &&
+            e.data.size > 0
+          ) {
+            try {
+              const arrayBuffer = await e.data.arrayBuffer();
+              voiceWs.send(arrayBuffer);
+            } catch (err) {
+              console.warn("Error sending audio chunk:", err);
+            }
+          }
+        };
+
+        // Emit audio chunks every 200ms
+        voiceRecorder.start(200);
+      }
+
+      // Barge-in / Interruption handler
+      function handleBargeIn(interruptedTranscript = "") {
+        const interruptedTurnId = ++currentTurnId;
+        console.log(`[Voice] Barge-in interruption triggered for turn #${interruptedTurnId}:`, interruptedTranscript);
+        stopCurrentPlayback();
+        if (currentPlaybackResolve) {
+          currentPlaybackResolve();
+          currentPlaybackResolve = null;
+        }
+
+        // Issue interruption signal to backend to invalidate in-flight audio/responses and cancel pending proposals
+        if (sessionId) {
+          fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/interrupt", {
+            method: "POST"
+          }).then(res => res.json()).then(data => {
+            console.log("[Voice] Backend acknowledged interrupt:", data);
+            if (isInspectorOpen) fetchInspectorData();
+          }).catch(err => {
+            console.warn("[Voice] Failed to send interrupt to backend:", err);
+          });
+        }
+
+        setVoiceState("listening");
+        resetUtteranceState();
+
+        if (interruptedTranscript) {
+          accumulatedUtterance = interruptedTranscript;
+          latestInterim = interruptedTranscript;
+          liveInterimText.textContent = interruptedTranscript;
+          liveInterimText.classList.add("active-speech");
+        } else {
+          liveInterimText.textContent = "Listening... speak naturally";
+          liveInterimText.classList.remove("active-speech");
+        }
+      }
+
+      function handleVoiceWsMessage(data) {
+        if (isMuted) return;
+
+        // Barge-in support: user speaks while assistant is speaking
+        if (voiceState === "speaking") {
+          const now = performance.now();
+          const elapsedSinceStart = playbackStartTime ? (now - playbackStartTime) : 9999;
+          const currentEnergy = getMicEnergy();
+
+          // 1. Instant VAD barge-in via Deepgram SpeechStarted event
+          if (data.type === "SpeechStarted") {
+            // Echo & onset debounce guard:
+            // Ignore acoustic echo during the initial speaker onset transient
+            // and verify microphone energy exceeds speaker leakage baseline
+            if (elapsedSinceStart >= ONSET_DEBOUNCE_MS && currentEnergy >= BARGE_IN_ENERGY_THRESHOLD) {
+              console.log(`[Voice] SpeechStarted barge-in validated (elapsed=${Math.round(elapsedSinceStart)}ms, energy=${currentEnergy.toFixed(3)})`);
+              handleBargeIn();
+              return;
+            } else {
+              console.log(`[Voice] SpeechStarted suppressed by echo guard (elapsed=${Math.round(elapsedSinceStart)}ms, energy=${currentEnergy.toFixed(3)})`);
+              return;
+            }
+          }
+
+          // 2. Transcript-backed barge-in via Deepgram Results event
+          if (data.type === "Results" && (data.transcript || "").trim()) {
+            const transcriptText = data.transcript.trim();
+            if (elapsedSinceStart >= ONSET_DEBOUNCE_MS && (currentEnergy >= BARGE_IN_ENERGY_THRESHOLD || transcriptText.length > 2)) {
+              console.log(`[Voice] Transcript barge-in validated: "${transcriptText}"`);
+              handleBargeIn(transcriptText);
+              return;
+            }
+          }
+          return;
+        }
+
+        if (voiceState !== "listening") return;
+
+        if (data.type === "Results") {
+          const transcriptText = (data.transcript || "").trim();
+          const isFinal = data.is_final;
+          const speechFinal = data.speech_final;
+
+          if (transcriptText) {
+            latestInterim = transcriptText;
+            liveInterimText.textContent = transcriptText;
+            liveInterimText.classList.add("active-speech");
+          }
+
+          if (isFinal && transcriptText) {
+            if (accumulatedUtterance) {
+              accumulatedUtterance += " " + transcriptText;
+            } else {
+              accumulatedUtterance = transcriptText;
+            }
+            liveInterimText.textContent = accumulatedUtterance;
+          }
+
+          // Automatic submission upon finalized utterance
+          if (speechFinal && (accumulatedUtterance.trim() || latestInterim.trim())) {
+            finalizeAndSubmitVoiceUtterance();
+          }
+        } else if (data.type === "UtteranceEnd") {
+          // Automatic submission upon UtteranceEnd event (pause after speaking)
+          if (accumulatedUtterance.trim() || latestInterim.trim()) {
+            finalizeAndSubmitVoiceUtterance();
+          }
+        }
+      }
+
+      async function finalizeAndSubmitVoiceUtterance() {
+        const textToSend = (accumulatedUtterance.trim() || latestInterim.trim());
+        if (hasSubmittedCurrentUtterance || !textToSend) return;
+        hasSubmittedCurrentUtterance = true;
+        const turnId = ++currentTurnId;
+
+        // Transition UI state to Processing / Thinking
+        setVoiceState("processing");
+        liveInterimText.textContent = `"${textToSend}"`;
+        liveInterimText.classList.remove("active-speech");
+
+        // Render user message in transcript
+        appendMessage("user", textToSend);
+
+        try {
+          const t0 = performance.now();
+          const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: textToSend }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || "Server error (" + res.status + ")");
+          }
+
+          const data = await res.json();
+
+          // Monotonic Turn ID check: Discard stale response if a newer turn or barge-in occurred
+          if (turnId !== currentTurnId || !isVoiceModeActive) {
+            console.log(`[Voice] Discarding stale turn response #${turnId} (active turn is #${currentTurnId})`);
+            return;
+          }
+
+          lastLlmMs = data.latency_ms || (performance.now() - t0);
+          updateLatencyDisplay();
+
+          // Render assistant reply in transcript
+          appendMessage("assistant", data.reply);
+
+          // Update appointment cards
+          if (data.confirmed) {
+            updatePendingCard(null);
+            showReceipt(data.confirmed.booking_id, data.reply);
+          } else if (data.pending) {
+            updatePendingCard(data.pending);
+          } else {
+            updatePendingCard(null);
+          }
+
+          if (isInspectorOpen) fetchInspectorData();
+
+          // Automatically synthesize and speak assistant response with Cartesia
+          const textToSpeak = data.spoken_reply || data.reply;
+          await speakVoiceResponse(textToSpeak, turnId);
+
+        } catch (err) {
+          if (turnId === currentTurnId) {
+            showError("Voice turn error: " + err.message);
+            resetUtteranceState();
+            if (isVoiceModeActive && !isMuted) {
+              setVoiceState("listening");
+              liveInterimText.textContent = "Listening... speak naturally";
+            }
+          }
+        }
+      }
+
+      async function speakVoiceResponse(textToSpeak, turnId = null) {
+        if (!isVoiceModeActive) return;
+        if (turnId !== null && turnId !== currentTurnId) {
+          console.log(`[Voice] Suppressing stale speakVoiceResponse for turn #${turnId} (active: #${currentTurnId})`);
+          return;
+        }
+
+        setVoiceState("speaking");
+        liveInterimText.textContent = "Receptionist speaking... (speak to interrupt)";
+        liveInterimText.classList.remove("active-speech");
+        stopCurrentPlayback();
+
+        currentSpeakAbortController = new AbortController();
+
+        try {
+          const t0 = performance.now();
+          const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: textToSpeak, voice_id: currentVoiceId }),
+            signal: currentSpeakAbortController.signal,
+          });
+
+          if (!res.ok) {
+            throw new Error("Speech synthesis failed (" + res.status + ")");
+          }
+
+          if (turnId !== null && turnId !== currentTurnId) {
+            console.log(`[Voice] Discarding stale TTS response for turn #${turnId}`);
+            return;
+          }
+
+          lastTtsMs = performance.now() - t0;
+          updateLatencyDisplay();
+          if (isInspectorOpen) fetchInspectorData();
+
+          const arrayBuffer = await res.arrayBuffer();
+
+          // If interrupted or turn became stale while speech was synthesizing, do not play
+          if (voiceState !== "speaking" || !isVoiceModeActive || (turnId !== null && turnId !== currentTurnId)) {
+            console.log(`[Voice] Turn #${turnId} stale or interrupted before playback started.`);
+            return;
+          }
+
+          // Play audio and wait for completion OR barge-in interruption
+          await new Promise((resolve) => {
+            currentPlaybackResolve = resolve;
+            playAudioBytes(arrayBuffer).then(resolve).catch(resolve);
+          });
+
+        } catch (err) {
+          if (err && err.name === "AbortError") {
+            console.log("[Voice] Speech synthesis aborted via barge-in.");
+          } else {
+            console.error("Speech playback error:", err);
+          }
+        } finally {
+          currentSpeakAbortController = null;
+          currentPlaybackResolve = null;
+          stopCurrentPlayback();
+          // Only return to listening if we completed speech without barge-in and turn is still current
+          if (isVoiceModeActive && !isMuted && voiceState === "speaking" && (turnId === null || turnId === currentTurnId)) {
+            resetUtteranceState();
+            setVoiceState("listening");
+            liveInterimText.textContent = "Listening... speak naturally";
+          }
+        }
+      }
+
+      // Touch fallback buttons for appointment cards
+      btnConfirm.addEventListener("click", async function() {
+        if (isBusy || !sessionId) return;
+        const confirmTurnId = ++currentTurnId;
+        stopCurrentPlayback();
+        showError(null);
+
+        try {
+          const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/confirm", {
+            method: "POST"
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || "Confirmation failed");
+
+          if (confirmTurnId !== currentTurnId) return;
+
+          if (data.success) {
+            updatePendingCard(null);
+            showReceipt(data.booking_id, data.message);
+            appendMessage("system", "✔ Appointment Confirmed! Booking #" + data.booking_id);
+            if (data.spoken_message) {
+              await speakVoiceResponse(data.spoken_message, confirmTurnId);
+            }
+          } else {
+            showError(data.message || "Could not confirm appointment.");
+            updatePendingCard(null);
+          }
+          if (isInspectorOpen) fetchInspectorData();
+        } catch (err) {
+          if (confirmTurnId === currentTurnId) {
+            showError("Confirmation error: " + err.message);
+          }
+        }
+      });
+
+      btnCancel.addEventListener("click", async function() {
+        if (isBusy || !sessionId) return;
+        ++currentTurnId;
+        stopCurrentPlayback();
+        showError(null);
+
+        try {
+          const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/cancel", {
+            method: "POST"
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || "Cancel failed");
+
+          updatePendingCard(null);
+          appendMessage("system", data.message || "Selection cancelled.");
+          if (isInspectorOpen) fetchInspectorData();
+          await speakVoiceResponse("Your appointment selection has been cancelled.");
+        } catch (err) {
+          showError("Cancel error: " + err.message);
+        }
+      });
+
+      // Event Listeners for Call Controls
+      btnStartCall.addEventListener("click", function() {
+        startVoiceMode();
+      });
+
+      btnStartCallHeader.addEventListener("click", function() {
+        startVoiceMode();
+      });
+
+      btnEndCall.addEventListener("click", function() {
+        endVoiceMode(true);
+      });
+
+      btnMuteVoice.addEventListener("click", function() {
+        toggleMuteVoice();
+      });
+
+      voiceOrb.addEventListener("click", function() {
+        if (!isVoiceModeActive) {
+          startVoiceMode();
+        } else if (voiceState === "speaking") {
+          handleBargeIn();
+        } else {
+          toggleMuteVoice();
+        }
+      });
+
+      // Keyboard shortcuts: Spacebar/Enter to connect; Spacebar/Escape to interrupt
+      window.addEventListener("keydown", function(e) {
+        if (startOverlay.style.display !== "none" && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          startVoiceMode();
+        } else if (isVoiceModeActive && voiceState === "speaking" && (e.key === " " || e.key === "Escape")) {
+          e.preventDefault();
+          handleBargeIn();
+        }
+      });
+
+      // ---------------------------------------------------------------------
+      // Milestone 6B: Voice Quality & A/B/C Audition Controls
+      // ---------------------------------------------------------------------
+      const voiceSelect = document.getElementById("voiceSelect");
+      const btnAudition = document.getElementById("btnAudition");
+      const auditionModal = document.getElementById("auditionModal");
+      const btnCloseAudition = document.getElementById("btnCloseAudition");
+      const auditionSentenceText = document.getElementById("auditionSentenceText");
+      const samplePills = document.querySelectorAll(".sample-pill");
+      const btnListenSamples = document.querySelectorAll(".btn-listen-sample");
+      const btnSelectVoices = document.querySelectorAll(".btn-select-voice");
+
+      // Developer Inspector Elements
+      const btnToggleInspector = document.getElementById("btnToggleInspector");
+      const inspectorPanel = document.getElementById("inspectorPanel");
+      const btnCloseInspector = document.getElementById("btnCloseInspector");
+      const btnRefreshInspector = document.getElementById("btnRefreshInspector");
+      const inspSessionId = document.getElementById("inspSessionId");
+      const inspActiveVoice = document.getElementById("inspActiveVoice");
+      const inspPatientName = document.getElementById("inspPatientName");
+      const inspStatusBadge = document.getElementById("inspStatusBadge");
+      const inspStagedBanner = document.getElementById("inspStagedBanner");
+      const inspCommitBanner = document.getElementById("inspCommitBanner");
+      const inspDoctor = document.getElementById("inspDoctor");
+      const inspSpecialty = document.getElementById("inspSpecialty");
+      const inspTime = document.getElementById("inspTime");
+      const inspSlotId = document.getElementById("inspSlotId");
+      const inspSqliteContent = document.getElementById("inspSqliteContent");
+      const inspEventCount = document.getElementById("inspEventCount");
+      const inspEventList = document.getElementById("inspEventList");
+
+      let currentVoiceId = "62ae83ad-4f6a-430b-af41-a9bede9286ca";
+      let currentSampleKey = "greeting";
+      let isInspectorOpen = false;
+      let inspectorPollInterval = null;
+      let auditionAudioSource = null;
+
+      const AUDITION_TEXTS = {
+        greeting: "Hello, thank you for calling Appointment Scheduler. I have two openings with Dr. Charles Babbage in Cardiology: Tuesday, November 17 at 9:00 AM, or Wednesday, November 18 at 2:00 PM PST. Which of those times works best for you?",
+        confirmation: "I have prepared an appointment for you with Dr. Florence Nightingale in Pediatrics for Tuesday, November 17, 2026 at 9:00 AM PST. Would you like me to book this appointment for you?",
+        receipt: "Your appointment with Dr. Ada Lovelace for General Practice on Wednesday, November 18, 2026 at 9:00 AM PST has been successfully confirmed. Your booking number is 42. We look forward to seeing you!"
+      };
+
+      async function updateActiveVoice(newVoiceId) {
+        currentVoiceId = newVoiceId;
+        if (voiceSelect) voiceSelect.value = newVoiceId;
+
+        document.querySelectorAll(".voice-audition-card").forEach(c => {
+          c.classList.toggle("active-selected", c.getAttribute("data-voice") === newVoiceId);
+        });
+
+        if (sessionId) {
+          try {
+            await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/voice", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ voice_id: newVoiceId }),
+            });
+            if (isInspectorOpen) fetchInspectorData();
+          } catch (err) {
+            console.error("Failed to update active voice on server:", err);
+          }
+        }
+      }
+
+      if (voiceSelect) {
+        voiceSelect.addEventListener("change", function() {
+          updateActiveVoice(voiceSelect.value);
+        });
+      }
+
+      if (btnAudition) {
+        btnAudition.addEventListener("click", function() {
+          auditionModal.style.display = "flex";
+          updateActiveVoice(currentVoiceId);
+        });
+      }
+
+      if (btnCloseAudition) {
+        btnCloseAudition.addEventListener("click", function() {
+          stopAuditionPlayback();
+          auditionModal.style.display = "none";
+        });
+      }
+
+      samplePills.forEach(pill => {
+        pill.addEventListener("click", function() {
+          samplePills.forEach(p => p.classList.remove("active"));
+          pill.classList.add("active");
+          currentSampleKey = pill.getAttribute("data-sample");
+          auditionSentenceText.textContent = `"${AUDITION_TEXTS[currentSampleKey]}"`;
+        });
+      });
+
+      function stopAuditionPlayback() {
+        if (auditionAudioSource) {
+          try { auditionAudioSource.stop(); } catch (_) {}
+          auditionAudioSource = null;
+        }
+        btnListenSamples.forEach(btn => {
+          btn.classList.remove("playing");
+          btn.textContent = "▶ Listen Sample";
+        });
+      }
+
+      btnListenSamples.forEach(btn => {
+        btn.addEventListener("click", async function() {
+          const voiceId = btn.getAttribute("data-voice");
+          stopAuditionPlayback();
+          ensureAudioContext();
+
+          btn.classList.add("playing");
+          btn.textContent = "⏳ Loading...";
+
+          try {
+            const res = await fetch("/api/voices/audition", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ voice_id: voiceId, sample_key: currentSampleKey }),
+            });
+            if (!res.ok) throw new Error("Audition request failed (" + res.status + ")");
+
+            btn.textContent = "🔊 Playing...";
+            const arrayBuf = await res.arrayBuffer();
+            const decodedBuffer = await audioCtx.decodeAudioData(arrayBuf);
+            auditionAudioSource = audioCtx.createBufferSource();
+            auditionAudioSource.buffer = decodedBuffer;
+            auditionAudioSource.connect(audioCtx.destination);
+            auditionAudioSource.onended = () => {
+              btn.classList.remove("playing");
+              btn.textContent = "▶ Listen Sample";
+              auditionAudioSource = null;
+            };
+            auditionAudioSource.start(0);
+          } catch (err) {
+            console.error("Audition playback failed:", err);
+            btn.classList.remove("playing");
+            btn.textContent = "▶ Listen Sample";
+            showError("Audition error: " + err.message);
+          }
+        });
+      });
+
+      btnSelectVoices.forEach(btn => {
+        btn.addEventListener("click", function() {
+          const voiceId = btn.getAttribute("data-voice");
+          updateActiveVoice(voiceId);
+          stopAuditionPlayback();
+          auditionModal.style.display = "none";
+        });
+      });
+
+      // ---------------------------------------------------------------------
+      // Milestone 6B: Developer Inspector Logic
+      // ---------------------------------------------------------------------
+      function toggleInspector(open) {
+        isInspectorOpen = (typeof open === "boolean") ? open : !isInspectorOpen;
+        inspectorPanel.classList.toggle("collapsed", !isInspectorOpen);
+        btnToggleInspector.classList.toggle("active", isInspectorOpen);
+
+        if (isInspectorOpen) {
+          fetchInspectorData();
+          if (!inspectorPollInterval) {
+            inspectorPollInterval = setInterval(fetchInspectorData, 1800);
+          }
+        } else {
+          if (inspectorPollInterval) {
+            clearInterval(inspectorPollInterval);
+            inspectorPollInterval = null;
+          }
+        }
+      }
+
+      if (btnToggleInspector) {
+        btnToggleInspector.addEventListener("click", () => toggleInspector());
+      }
+      if (btnCloseInspector) {
+        btnCloseInspector.addEventListener("click", () => toggleInspector(false));
+      }
+      if (btnRefreshInspector) {
+        btnRefreshInspector.addEventListener("click", () => fetchInspectorData());
+      }
+
+      async function fetchInspectorData() {
+        if (!sessionId) return;
+        try {
+          const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/inspector");
+          if (!res.ok) return;
+          const data = await res.json();
+          renderInspectorView(data);
+        } catch (err) {
+          console.debug("Inspector fetch error:", err);
+        }
+      }
+
+      function renderInspectorView(data) {
+        inspSessionId.textContent = data.session_id ? data.session_id.substring(0, 8) + "..." : "—";
+        if (data.active_voice) {
+          inspActiveVoice.textContent = `${data.active_voice.name} (${data.active_voice.accent})`;
+        }
+
+        const appt = data.appointment_state || {};
+        inspStatusBadge.textContent = (appt.status || "IDLE").toUpperCase();
+        inspStatusBadge.className = "status-pill " + (appt.status || "idle");
+
+        inspStagedBanner.style.display = appt.is_staged_in_memory ? "block" : "none";
+        inspCommitBanner.style.display = appt.is_committed_to_sqlite ? "block" : "none";
+
+        inspDoctor.textContent = appt.doctor || "—";
+        inspSpecialty.textContent = appt.specialty || "—";
+        inspTime.textContent = appt.time || "—";
+        inspSlotId.textContent = appt.slot_id ? "#" + appt.slot_id : "—";
+
+        // Render real SQLite row
+        if (data.real_sqlite_booking) {
+          const b = data.real_sqlite_booking;
+          inspSqliteContent.innerHTML = `
+            <div class="card-row"><span class="label">Booking ID:</span><span class="val font-semibold">#${b.id}</span></div>
+            <div class="card-row"><span class="label">Doctor:</span><span class="val">${b.doctor_name || "—"} (${b.specialty || ""})</span></div>
+            <div class="card-row"><span class="label">Patient:</span><span class="val">${b.patient_name || "—"}</span></div>
+            <div class="card-row"><span class="label">Status:</span><span class="status-pill committed">${b.status}</span></div>
+            <div class="card-row"><span class="label">Created At:</span><span class="val code-val">${b.created_at || "—"}</span></div>
+          `;
+        } else {
+          inspSqliteContent.innerHTML = `<div class="empty-state">No appointment committed in SQLite yet.</div>`;
+        }
+
+        // Render event timeline
+        const events = data.events || [];
+        inspEventCount.textContent = events.length + " events";
+        if (events.length === 0) {
+          inspEventList.innerHTML = `<div class="empty-state">No pipeline events recorded yet.</div>`;
+        } else {
+          inspEventList.innerHTML = events.slice().reverse().map(e => {
+            const timeStr = e.timestamp ? e.timestamp.split("T")[1].substring(0, 8) : "";
+            const stageClass = e.stage || "stt";
+            const durTag = e.duration_ms ? `<span class="dur-badge">${Math.round(e.duration_ms)}ms</span>` : "";
+            const detailsJson = JSON.stringify(e.details || {}, null, 2);
+            return `
+              <div class="event-item">
+                <div class="event-top">
+                  <span class="stage-pill ${stageClass}">${e.stage}</span>
+                  ${durTag}
+                  <span class="dur-badge">${timeStr}</span>
+                </div>
+                <div class="event-title">${e.title}</div>
+                <pre class="event-details-preview">${detailsJson}</pre>
+              </div>
+            `;
+          }).join("");
+        }
+      }
+
+      // Initialize session on load
+      initSession();
+    })();
+  </script>
+</body>
+</html>

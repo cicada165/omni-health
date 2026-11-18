@@ -1,0 +1,40 @@
+flowchart TD
+    subgraph Client["Patient / Caller"]
+        Utterance["Spoken Utterance: 'Yes, book Tuesday 9 AM'"]
+    end
+
+    subgraph LLMTier["Tier 1: Conversational AI (Gemini 2.5 Flash)"]
+        NLU["Natural Language Understanding"]
+        SearchTools["Read Tools: list_doctors(), search_slots()"]
+        StageTool["Staging Tool: propose_booking(slot_id)"]
+    end
+
+    subgraph BusinessLogic["Tier 2: Business Logic & State Machine (Python)"]
+        VerbalClassifier["Verbal Classifier (Affirmation / Cancel / Mod)"]
+        SessionRAM["In-Memory State (pending_booking)"]
+        ConfirmEngine["Deterministic confirm_booking() Controller"]
+    end
+
+    subgraph StorageTier["Tier 3: Persistence & Database (SQLite WAL)"]
+        SQLTrans["BEGIN IMMEDIATE (ACID Transaction)"]
+        PartialIdx["Partial Unique Index (uix_slot_confirmed)"]
+        BookingsTable["bookings Table (Persistent Disk Storage)"]
+    end
+
+    %% Flow lines
+    Utterance -->|Natural Speech| NLU
+    NLU --> SearchTools
+    SearchTools -.->|Read Queries Only| StorageTier
+    NLU -->|Staging Decision| StageTool
+    StageTool -->|Save Proposal in RAM| SessionRAM
+
+    %% Hard Boundary: Gemini CANNOT touch StorageTier directly
+    StageTool x-.-x|NO WRITE PERMISSION| StorageTier
+
+    %% Verbal Affirmation path
+    Utterance -->|Direct Affirmation: 'Yes, book it'| VerbalClassifier
+    VerbalClassifier -->|Bypass LLM| ConfirmEngine
+    SessionRAM -->|Retrieve Pending Proposal| ConfirmEngine
+    ConfirmEngine -->|Atomic Execute| SQLTrans
+    SQLTrans --> PartialIdx
+    PartialIdx --> BookingsTable

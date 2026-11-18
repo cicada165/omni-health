@@ -1,0 +1,69 @@
+flowchart TD
+    subgraph Client["Browser Client (Vanilla HTML5 / WebAudio)"]
+        Mic["Microphone Stream (MediaRecorder / AudioWorklet)"]
+        WSClient["WebSocket Client (/ws/transcribe)"]
+        UI["UI Chat & Inspector Drawer"]
+        AudioPlayer["Cartesia Audio Player (WAV)"]
+        EchoGuard["Acoustic Echo Guard (300ms Suppress)"]
+    end
+
+    subgraph BackendProxy["FastAPI Proxy Server (scheduler/web.py)"]
+        WSProxy["STT Streaming Proxy (/api/sessions/:id/ws/transcribe)"]
+        SessionMgr["Session Registry & asyncio.Lock"]
+        InspectorSvc["Developer Inspector Service"]
+        VerbalSM["Deterministic Verbal Confirmation Classifier"]
+    end
+
+    subgraph ExternalSTT["Deepgram Cloud"]
+        Nova3["Deepgram Nova-3 (WSS, 300ms endpointing)"]
+    end
+
+    subgraph AgentEngine["Conversational Layer (scheduler/agent.py)"]
+        Gemini["Google Gemini 2.5 Flash / 3.8 Flash"]
+        ToolDispatch["Manual Tool Dispatcher"]
+        InMemoryState["In-Memory Session State (pending_booking)"]
+    end
+
+    subgraph DatabaseLayer["Persistence Layer (scheduler/db.py)"]
+        SQLite["SQLite 3 (appointment_scheduler.db, WAL Mode)"]
+        PartialIndex["Partial Unique Index (uix_slot_confirmed)"]
+        IdempotencyIndex["Unique Index (uix_idempotency)"]
+    end
+
+    subgraph ExternalTTS["Cartesia Cloud (scheduler/tts.py)"]
+        CartesiaAPI["Cartesia Sonic-3.6 (WAV 44.1kHz PCM)"]
+    end
+
+    %% Audio and WebSocket data paths
+    Mic -->|Binary Audio Frames| WSClient
+    WSClient -->|WebSocket| WSProxy
+    WSProxy -->|Upstream WSS| Nova3
+    Nova3 -->|Interim & Final JSON| WSProxy
+    WSProxy -->|Transcripts| WSClient
+    WSClient -->|Auto-Submit Final Utterance| UI
+
+    %% Turn execution paths
+    UI -->|POST /messages| SessionMgr
+    SessionMgr -->|Serialized via Lock| VerbalSM
+
+    %% Branching: Verbal Affirmation vs Normal Dialogue
+    VerbalSM -->|Normal Dialogue / Mod| Gemini
+    VerbalSM -->|Affirmative Confirmation| SQLite
+
+    %% Gemini tool interaction
+    Gemini -->|search_slots / list_doctors| ToolDispatch
+    ToolDispatch -->|Read Queries| SQLite
+    Gemini -->|propose_booking| InMemoryState
+    InMemoryState -.->|Staged: NOT Written| SQLite
+
+    %% Commit and Receipt Path
+    SQLite -->|Atomic Commit Success| VerbalSM
+    VerbalSM -->|Deterministic Spoken Receipt| CartesiaAPI
+    Gemini -->|Natural Spoken Reply| CartesiaAPI
+    CartesiaAPI -->|Audio/WAV Stream| AudioPlayer
+    AudioPlayer -->|Playback State| EchoGuard
+    EchoGuard -.->|Inhibit Mic Input| Mic
+
+    %% Inspector Observability
+    SessionMgr -.->|Timeline Events| InspectorSvc
+    InspectorSvc -.->|GET /inspector| UI

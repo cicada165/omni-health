@@ -1,0 +1,24 @@
+gantt
+    title Voice-to-Ear Latency Timeline (Target < 1200ms)
+    dateFormat X
+    axisFormat %s ms
+
+    section Conversational Search Turn (~1280ms)
+    Patient Stops Speaking           :done, crit, 0, 1
+    VAD Endpointing (Deepgram)       :active, 0, 300
+    STT Inference & Network Dispatch :active, 300, 480
+    Gemini 2.5 Flash TTFT & Tool     :active, 480, 800
+    Gemini Completion Generation     :active, 800, 1050
+    Cartesia Sonic-3.6 TTFB          :active, 1050, 1160
+    Full WAV Buffer & Audio Ingest   :active, 1160, 1280
+    Patient Hears Assistant Audio    :crit, 1280, 1281
+
+    section Verbal Confirmation Turn (~740ms)
+    Patient Stops Speaking           :done, crit, 0, 1
+    VAD Endpointing (Deepgram)       :active, 0, 300
+    STT Inference & Network Dispatch :active, 300, 480
+    Python Regex Interception (<1ms) :active, 480, 481
+    SQLite Atomic Commit (3.2ms)     :active, 481, 485
+    Cartesia Sonic-3.6 TTFB          :active, 485, 595
+    Full WAV Buffer & Audio Ingest   :active, 595, 740
+    Patient Hears Spoken Receipt     :crit, 740, 741

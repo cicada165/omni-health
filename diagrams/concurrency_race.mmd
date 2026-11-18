@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    actor PatientA as Patient A (Session 1)
+    actor PatientB as Patient B (Session 2)
+    participant WorkerA as FastAPI Worker A
+    participant WorkerB as FastAPI Worker B
+    participant DB as SQLite WAL (appointment_scheduler.db)
+
+    Note over PatientA, DB: Both patients have staged Slot #5 in memory simultaneously
+    PatientA->>WorkerA: "Yes, book it" (Confirm Slot #5)
+    PatientB->>WorkerB: "Yes, book it" (Confirm Slot #5)
+
+    WorkerA->>DB: BEGIN IMMEDIATE (Acquires RESERVED lock)
+    WorkerB->>DB: BEGIN IMMEDIATE (Waits for RESERVED lock...)
+
+    Note over WorkerA, DB: Worker A acquires write lock first
+    WorkerA->>DB: Check idempotency key: None found
+    WorkerA->>DB: Check slot availability: Slot #5 exists & future
+    WorkerA->>DB: INSERT INTO bookings (slot_id=5, patient='Alex', status='confirmed')
+    Note over DB: uix_slot_confirmed check: PASSED
+    WorkerA->>DB: COMMIT (Booking #101 created)
+    WorkerA-->>PatientA: Spoken Receipt: "Booking #101 Confirmed!"
+
+    Note over WorkerB, DB: Worker A releases lock. Worker B enters BEGIN IMMEDIATE.
+    WorkerB->>DB: Check idempotency key: None found
+    WorkerB->>DB: Check slot availability: Slot #5 exists
+    WorkerB->>DB: INSERT INTO bookings (slot_id=5, patient='Jordan', status='confirmed')
+    Note over DB: uix_slot_confirmed check:<br/>IntegrityError: UNIQUE constraint failed: bookings.slot_id!
+    WorkerB->>DB: ROLLBACK (Transaction cleanly aborted)
+    WorkerB-->>PatientB: Spoken Fallback: "Cannot confirm: this slot was just booked by another patient. Let's find another time."
